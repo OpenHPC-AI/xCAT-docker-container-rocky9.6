@@ -15,8 +15,8 @@ LABEL org.opencontainers.image.licenses="GPL-2.0-or-later"
 # Environment configuration
 # ------------------------------------------------------------------------------
 ENV container=docker
-ENV LANG=en_US.UTF-9
-ENV LC_ALL=en_US.UTF-9
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 ENV XCATROOT=/opt/xcat
 ENV PATH="$XCATROOT/bin:$XCATROOT/sbin:$XCATROOT/share/xcat/tools:$PATH"
 ENV MANPATH="$XCATROOT/share/man:$MANPATH"
