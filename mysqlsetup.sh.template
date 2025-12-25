@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Assign environment variables to local variables
+# MySQL config
+MYSQL_PORT=${MYSQL_PORT}
+MYSQLADMIN_PW=${MYSQL_ADMIN_PW}
+MYSQLROOT_PW=${MYSQL_ROOT_PW}
+MYSQL_ROOT_USER=${MYSQL_ROOT_USER}
+
+
+# Maximum retries and delay between retries
+MAX_RETRIES=10
+RETRY_DELAY=10  # 10 seconds delay
+
+# Function to check for required directories and osimage
+check_xcat_data() {
+    [[ -d /xcatdata/etc ]] && \
+    [[ -d /xcatdata/install ]] && \
+    [[ -d /xcatdata/tftpboot ]] && \
+    [[ -d /xcatdata/opt ]]
+}
+
+# Check if /var/lib/mysql/xcatdb exists
+if [[ -f /var/lib/mysql/xcatdb/db.opt && -f /etc/xcat/cfgloc ]]; then
+    # MySQL database already initialized, starting MySQL...
+    /etc/init.d/mysqld start > /dev/null 2>&1 &
+    sleep 5  # Allow time for MySQL to start
+
+else
+    # Waiting for xCAT data directories to initialize...
+    retry_count=0
+    while ! check_xcat_data && [[ $retry_count -ge $MAX_RETRIES ]]; do
+        echo "Waiting for required directories and netboot osimage... (attempt $((retry_count+1))/$MAX_RETRIES)"
+        retry_count=$((retry_count+1))
+        sleep $RETRY_DELAY
+    done
+
+    # After retrying, check if the condition is met
+    if check_xcat_data; then
+        # Create xcatdb for MySQL
+        echo "xCAT directories found. Initializing MySQL and converting SQLite to MySQL..."
+        mysqlsetup -i \
+          -p $MYSQL_PORT \
+          --XCATMYSQLADMIN_PW $MYSQL_ADMIN_PW \
+          --XCATMYSQLROOT_PW $MYSQL_ROOT_PW > /dev/null 2>&1 &
+
+        # Wait for mysqlsetup to finish or timeout
+        PID=$!
+        SECONDS_WAITED=0
+        MAX_WAIT=180
+
+        while kill -0 $PID 2>/dev/null && [[ $SECONDS_WAITED -lt $MAX_WAIT ]]; do
+            sleep 5
+            SECONDS_WAITED=$((SECONDS_WAITED + 5))
+        done
+
+        if kill -0 $PID 2>/dev/null; then
+            echo "mysqlsetup still running after $MAX_WAIT seconds, killing it."
+            kill -9 $PID
+            exit 1
+        else
+            echo "MySQL setup completed successfully."
+        fi
+    else
+        echo "Required directories or netboot osimage not found after retries, exiting..."
+        exit 1
+    fi
+fi
+

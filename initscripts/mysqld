@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# chkconfig: 345 85 15
+# description: MySQL server for xCAT on port 3307
+# processname: mysqld
+# config: /etc/xcat/cfgloc
+# pidfile: /var/run/mysqld-xcat.pid
+
+### BEGIN INIT INFO
+# Provides:          mysqld-xcat
+# Required-Start:    $network $remote_fs
+# Required-Stop:     $network $remote_fs
+# Default-Start:     3 4 5
+# Default-Stop:      0 1 2 6
+# Short-Description: Start/stop MySQL server for xCAT
+### END INIT INFO
+
+# Variables
+MYSQL_USER="mysql"
+MYSQL_BASEDIR="/usr"
+MYSQL_DATADIR="/var/lib/mysql"
+MYSQL_SOCKET="$MYSQL_DATADIR/mysql.sock"
+MYSQL_PORT=3307
+MYSQL_PIDFILE="/var/run/mysqld-xcat.pid"
+
+start() {
+    if [[ -f "$MYSQL_DATADIR/xcatdb/db.opt" && -f /etc/xcat/cfgloc ]]; then
+        echo "Starting MySQL (xCAT) on port $MYSQL_PORT..."
+        nohup /usr/bin/mysqld_safe \
+            --user=$MYSQL_USER \
+            --basedir=$MYSQL_BASEDIR \
+            --datadir=$MYSQL_DATADIR \
+            --socket=$MYSQL_SOCKET \
+            --port=$MYSQL_PORT > /dev/null 2>&1 &
+        echo $! > "$MYSQL_PIDFILE"
+        sleep 5
+    else
+        echo "MySQL xCAT database not initialized. Start aborted."
+        return 1
+    fi
+}
+
+stop() {
+    echo "Stopping MySQL (xCAT)..."
+    if [[ -f "$MYSQL_PIDFILE" ]]; then
+        kill "$(cat "$MYSQL_PIDFILE")" && rm -f "$MYSQL_PIDFILE"
+        sleep 3
+    else
+        pkill -f "mysqld.*port=$MYSQL_PORT"
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+status() {
+    if pgrep -f "mysqld.*port=$MYSQL_PORT" > /dev/null; then
+        echo "MySQL (xCAT) is running."
+        return 0
+    else
+        echo "MySQL (xCAT) is stopped."
+        return 1
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        restart
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac

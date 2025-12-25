@@ -18,8 +18,6 @@ variable_set() {
 
 }
 
-# Source environment variables
-source /etc/profile.d/xcat.sh
 
 start_supervisord() {
     echo "Starting supervisord to manage xCAT services..."
@@ -79,10 +77,12 @@ initialize_xcat() {
     echo "Initializing xCAT from /xcatdata.NEEDINIT..."
     rsync -a /xcatdata.NEEDINIT/ /xcatdata
     mv /xcatdata.NEEDINIT /xcatdata.orig
+    source /etc/profile.d/xcat.sh
+    set +e
     xcatconfig -d
-    xcatconfig -i
-    xcatconfig -c
-
+    xcatconfig -i -c -s
+    set -e
+    restartxcatd
     configure_site_table
     setup_ib_network
     configure_main_network
