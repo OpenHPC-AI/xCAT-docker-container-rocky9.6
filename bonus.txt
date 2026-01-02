@@ -1,0 +1,48 @@
+#To build portable xcatdata for xcat base osimage, to export into xcat container (Build one place at use anywhere !).
+
+```bash
+# Install xcat on any baremachine 
+# Once installation is done, then copycds of os iso in my case rocky9.6
+copycds Rocky-9.6-x86_64-dvd.iso
+
+# genreate osimage
+genimage rocky9.6-x86_64-netboot-compute
+```
+
+Now you can build xcatdata base osimage for portablility 
+
+```bash
+mkdir -p  /xcatdata/{opt,etc}
+cp -ar /etc/xcat /xcatdata/etc/
+cp -ar /install /xcatdata/
+cp -ar /opt/xcat /xcatdata/opt/
+cp -ar /tftpboot /xcatdata/
+cp -ar /etc/goconserver /xcatdata/etc/
+
+# once completed verify ! 
+tree xcatdata -L 2
+xcatdata
+├── etc
+│   ├── goconserver
+│   └── xcat
+├── install
+│   ├── netboot
+│   ├── postscripts
+│   ├── prescripts
+│   ├── rocky9.6
+│   └── winpostscripts
+├── opt
+│   └── xcat
+└── tftpboot
+    ├── boot
+    ├── xcat
+    └── yaboot
+
+14 directories, 1 file
+
+```
+
+Now compress this xcatdata into tar file !
+```bash
+tar -czvf xcatdata_rocky9.6.tgz xcatdata
+```
